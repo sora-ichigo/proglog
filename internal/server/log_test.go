@@ -15,7 +15,7 @@ func TestAppend(t *testing.T) {
 	}
 
 	_, err := log.Append(r)
-	if err != nil {
-		t.Fatalf("failed to append %s", err)
+	if err == nil {
+		t.Fatalf("failed to append %v", err)
 	}
 }
