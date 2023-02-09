@@ -13,6 +13,7 @@ func NewHTTPServer(addr string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
+			lsvr.handleConsume(w, r)
 		} else if r.Method == "POST" {
 			lsvr.handleProduce(w, r)
 		}
@@ -65,6 +66,36 @@ func (s *logServer) handleProduce(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	return
+}
+
+func (s *logServer) handleConsume(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	var req ConsumeRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	record, err := s.Log.Read(req.Offset)
+	if err == ElmOffsetNotFound {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res := ConsumeResponse{Record: record}
+	err = json.NewEncoder(w).Encode(&res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	return
