@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -53,18 +54,21 @@ func (s *logServer) handleProduce(w http.ResponseWriter, r *http.Request) {
 	var req ProduceRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
+		log.Printf("failed to decode request body with error %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	off, err := s.Log.Append(req.Record)
 	if err != nil {
+		log.Printf("failed to append record to log with error %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	res := ProduceResponse{Offset: off}
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
+		log.Printf("failed to encode response body with error %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -77,16 +81,19 @@ func (s *logServer) handleConsume(w http.ResponseWriter, r *http.Request) {
 	var req ConsumeRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
+		log.Printf("failed to decode request body with error %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	record, err := s.Log.Read(req.Offset)
 	if err == ElmOffsetNotFound {
+		log.Printf("record not found")
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	if err != nil {
+		log.Printf("failed to read record with error %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -94,6 +101,7 @@ func (s *logServer) handleConsume(w http.ResponseWriter, r *http.Request) {
 	res := ConsumeResponse{Record: record}
 	err = json.NewEncoder(w).Encode(&res)
 	if err != nil {
+		log.Printf("failed to encode response body with error %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
